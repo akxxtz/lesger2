@@ -1,0 +1,9 @@
+transaction_id,user_id,type,amount,description,date
+1,1,debit,500,makan makan,2025-01-03
+2,1,debit,90,transport,2025-01-03
+3,1,debit,4000,daddy,2025-01-03
+4,1,credit,300,flight,2025-01-03
+5,1,debit,580,part time,2025-01-03
+6,1,credit,700,new money,2025-01-03
+7,1,credit,600,GAMBLE,2025-01-03
+8,1,debit,200,eat,2025-01-03

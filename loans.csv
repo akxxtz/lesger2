@@ -1,0 +1,2 @@
+loan_id,user_id,principal_amount,interest_rate,repayment_period,outstanding_balance,status,created_at
+1,1,10000.00,7.00,60,2750.00,active,2025-01-03
