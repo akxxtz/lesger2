@@ -237,18 +237,6 @@ public class LedgerSystem {
     }
 
     public boolean recordTransaction(String type, String amountStr, String description) {
-        // Check if user has overdue loan
-        boolean hasOverdueLoan = loans.stream()
-                .anyMatch(l -> l.getUserId() == currentUser.getUserId() &&
-                        l.getStatus().equals("active") &&
-                        l.getCreatedAt().plusMonths(l.getRepaymentPeriod())
-                                .isBefore(LocalDate.now()));
-
-        if (hasOverdueLoan) {
-            System.out.println("Cannot perform transactions! You have an overdue loan!");
-            return false;
-        }
-
         try {
             BigDecimal amount = new BigDecimal(amountStr);
             if (amount.compareTo(BigDecimal.ZERO) <= 0) {
@@ -261,28 +249,40 @@ public class LedgerSystem {
                 return false;
             }
 
+            // Check for overdue loans
+            boolean hasOverdueLoan = loans.stream()
+                    .anyMatch(l -> l.getUserId() == currentUser.getUserId() &&
+                            l.getStatus().equals("active") &&
+                            l.getCreatedAt().plusMonths(l.getRepaymentPeriod())
+                                    .isBefore(LocalDate.now()));
+
+            if (hasOverdueLoan) {
+                System.out.println("Cannot perform transactions! You have an overdue loan!");
+                return false;
+            }
+
             int transactionId = transactions.size() + 1;
             LocalDate date = LocalDate.now();
 
             Transaction transaction = new Transaction(
-                    transactionId, currentUser.getUserId(), type, amount, description, date);
+                    transactionId,
+                    currentUser.getUserId(),
+                    type,
+                    amount,
+                    description,
+                    date
+            );
+
             transactions.add(transaction);
 
             // Update balance
             if (type.equals("debit")) {
                 currentUser.setBalance(currentUser.getBalance().add(amount));
-                if (currentUser.isSavingsActive()) {
-                    BigDecimal savingsAmount = amount.multiply(
-                            new BigDecimal(currentUser.getSavingsPercentage())
-                                    .divide(new BigDecimal("100")));
-                    currentUser.setSavings(currentUser.getSavings().add(savingsAmount));
-                    currentUser.setBalance(currentUser.getBalance().subtract(savingsAmount));
-                }
             } else {
                 currentUser.setBalance(currentUser.getBalance().subtract(amount));
             }
 
-            // Save to CSV
+            // Save transaction to CSV
             try (PrintWriter writer = new PrintWriter(new FileWriter("transactions.csv", true))) {
                 writer.println(transactionId + "," + currentUser.getUserId() + "," +
                         type + "," + amount + "," + description + "," + date);
@@ -734,17 +734,51 @@ public class LedgerSystem {
         }
     }
 
-        private void handleDebit() {
-            System.out.println("== Debit ==");
-            System.out.print("Enter amount: ");
-            String amount = scanner.nextLine();
-            System.out.print("Enter description: ");
-            String description = scanner.nextLine();
+    private void handleDebit() {
+        System.out.println("== Debit ==");
+        System.out.print("Enter amount: ");
+        String amount = scanner.nextLine();
+        System.out.print("Enter description: ");
+        String description = scanner.nextLine();
 
-            if (recordTransaction("debit", amount, description)) {
-                System.out.println("Debit Successfully Recorded!!!");
+        if (recordTransaction("debit", amount, description)) {
+            System.out.println("Debit Successfully Recorded!!!");
+
+            // Process savings if active
+            if (currentUser.isSavingsActive()) {
+                try {
+                    BigDecimal debitAmount = new BigDecimal(amount);
+                    BigDecimal savingsAmount = debitAmount
+                            .multiply(BigDecimal.valueOf(currentUser.getSavingsPercentage()))
+                            .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+
+                    // Update balance and savings
+                    currentUser.setBalance(currentUser.getBalance().subtract(savingsAmount));
+                    currentUser.setSavings(currentUser.getSavings().add(savingsAmount));
+
+                    System.out.printf("$%.2f transferred to savings (%d%% of debit)%n",
+                            savingsAmount, currentUser.getSavingsPercentage());
+
+                    // Record savings transaction
+                    saveSavingsTransaction(savingsAmount);
+                } catch (Exception e) {
+                    System.out.println("Error processing savings: " + e.getMessage());
+                }
             }
         }
+    }
+    private void saveSavingsTransaction(BigDecimal amount) {
+        try (PrintWriter writer = new PrintWriter(new FileWriter("savings.csv", true))) {
+            writer.printf("%d,%d,active,%d,%.2f,%s%n",
+                    transactions.size() + 1,
+                    currentUser.getUserId(),
+                    currentUser.getSavingsPercentage(),
+                    amount,
+                    LocalDate.now());
+        } catch (IOException e) {
+            System.out.println("Error saving savings transaction!");
+        }
+    }
 
         private void handleCredit() {
             System.out.println("== Credit ==");
@@ -758,24 +792,38 @@ public class LedgerSystem {
             }
         }
 
-        private void handleSavings() {
-            System.out.println("== Savings ==");
-            System.out.print("Are you sure you want to activate it? (Y/N) : ");
-            String activate = scanner.nextLine();
+    private void handleSavings() {
+        System.out.println("== Savings ==");
+        System.out.print("Are you sure you want to activate it? (Y/N) : ");
+        String activate = scanner.nextLine();
 
-            if (activate.equalsIgnoreCase("Y")) {
-                System.out.print("Please enter the percentage you wish to deduct from the next debit: ");
-                try {
-                    int percentage = Integer.parseInt(scanner.nextLine());
-                    if (setSavings(percentage)) {
-                        System.out.println("Savings Settings added successfully!!!");
-                    }
-                } catch (NumberFormatException e) {
-                    System.out.println("Invalid percentage!");
+        if (activate.equalsIgnoreCase("Y")) {
+            System.out.print("Please enter the percentage you wish to deduct from the next debit: ");
+            try {
+                int percentage = Integer.parseInt(scanner.nextLine());
+                if (percentage < 0 || percentage > 100) {
+                    System.out.println("Percentage must be between 0 and 100!");
+                    return;
                 }
+
+                currentUser.setSavingsActive(true);
+                currentUser.setSavingsPercentage(percentage);
+
+                // Save settings to CSV
+                try (PrintWriter writer = new PrintWriter(new FileWriter("savings.csv", true))) {
+                    writer.printf("%d,%d,active,%d%n",
+                            transactions.size() + 1,
+                            currentUser.getUserId(),
+                            percentage);
+                    System.out.println("Savings Settings added successfully!!!");
+                } catch (IOException e) {
+                    System.out.println("Error saving savings settings!");
+                }
+            } catch (NumberFormatException e) {
+                System.out.println("Invalid percentage!");
             }
         }
-
+    }
         private void checkAndTransferSavings() {
             try {
                 // Get the current date

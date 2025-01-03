@@ -8,3 +8,14 @@ transaction_id,user_id,type,amount,description,date
 7,1,credit,600,GAMBLE,2025-01-03
 8,1,debit,200,eat,2025-01-03
 9,2,debit,700,chair,2025-01-03
+10,1,debit,300,Pokemon TCG,2025-01-03
+11,1,credit,32,food,2025-01-03
+12,1,debit,211,motel,2025-01-03
+13,1,debit,333,ink,2025-01-03
+14,1,debit,300,suitcase,2025-01-04
+15,1,credit,431,ren,2025-01-04
+16,1,debit,300,Mother kasi,2025-01-04
+17,1,debit,20,food,2025-01-04
+18,1,debit,100,hi,2025-01-04
+19,1,debit,20,hihi,2025-01-04
+20,1,debit,200,money,2025-01-04

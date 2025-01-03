@@ -24,6 +24,7 @@ public class User {
         this.loan = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
         this.savingsPercentage = 0;
         this.savingsActive = false;
+        this.lastLoginDate = LocalDate.now();
     }
 
     // Getters
@@ -36,6 +37,7 @@ public class User {
     public BigDecimal getLoan() { return loan; }
     public int getSavingsPercentage() { return savingsPercentage; }
     public boolean isSavingsActive() { return savingsActive; }
+    public LocalDate getLastLoginDate() { return lastLoginDate; }
 
     // Setters
     public void setBalance(BigDecimal balance) {
@@ -53,8 +55,7 @@ public class User {
     public void setSavingsActive(boolean active) {
         this.savingsActive = active;
     }
-
-
-    public LocalDate getLastLoginDate() { return lastLoginDate; }
-    public void setLastLoginDate(LocalDate date) { this.lastLoginDate = date; }
+    public void setLastLoginDate(LocalDate date) {
+        this.lastLoginDate = date;
+    }
 }
