@@ -319,32 +319,53 @@ public class LedgerSystem {
 
     public void viewHistory() {
         System.out.println("== History ==");
-        System.out.println("Date\tDescription\tDebit\tCredit\tBalance");
+
+        // Define column widths
+        String format = "| %-10s | %-15s | %12s | %12s | %12s |%n";
+        String separator = "+------------+-----------------+--------------+--------------+--------------+%n";
+
+        // Print header
+        System.out.printf(separator);
+        System.out.printf(format, "Date", "Description", "Debit", "Credit", "Balance");
+        System.out.printf(separator);
 
         BigDecimal runningBalance = BigDecimal.ZERO;
-        for (Transaction t : transactions.stream()
+
+        // Get sorted transactions for current user
+        List<Transaction> userTransactions = transactions.stream()
                 .filter(t -> t.getUserId() == currentUser.getUserId())
                 .sorted(Comparator.comparing(Transaction::getDate))
-                .toList()) {
+                .toList();
+
+        // Print transactions
+        for (Transaction t : userTransactions) {
             if (t.getType().equals("debit")) {
                 runningBalance = runningBalance.add(t.getAmount());
-                System.out.printf("%s\t%s\t%.2f\t\t%.2f%n",
-                        t.getDate(), t.getDescription(), t.getAmount(), runningBalance);
+                System.out.printf(format,
+                        t.getDate().toString(),
+                        t.getDescription(),
+                        String.format("%.2f", t.getAmount()),
+                        "",
+                        String.format("%.2f", runningBalance));
             } else {
                 runningBalance = runningBalance.subtract(t.getAmount());
-                System.out.printf("%s\t%s\t\t%.2f\t%.2f%n",
-                        t.getDate(), t.getDescription(), t.getAmount(), runningBalance);
+                System.out.printf(format,
+                        t.getDate().toString(),
+                        t.getDescription(),
+                        "",
+                        String.format("%.2f", t.getAmount()),
+                        String.format("%.2f", runningBalance));
             }
         }
+
+        // Print bottom border
+        System.out.printf(separator);
 
         // Export to CSV
         try (PrintWriter writer = new PrintWriter("history_" + currentUser.getUserId() + ".csv")) {
             writer.println("Date,Description,Debit,Credit,Balance");
             runningBalance = BigDecimal.ZERO;
-            for (Transaction t : transactions.stream()
-                    .filter(t -> t.getUserId() == currentUser.getUserId())
-                    .sorted(Comparator.comparing(Transaction::getDate))
-                    .toList()) {
+            for (Transaction t : userTransactions) {
                 if (t.getType().equals("debit")) {
                     runningBalance = runningBalance.add(t.getAmount());
                     writer.printf("%s,%s,%.2f,,%.2f%n",
