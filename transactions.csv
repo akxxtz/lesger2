@@ -7,3 +7,4 @@ transaction_id,user_id,type,amount,description,date
 6,1,credit,700,new money,2025-01-03
 7,1,credit,600,GAMBLE,2025-01-03
 8,1,debit,200,eat,2025-01-03
+9,2,debit,700,chair,2025-01-03

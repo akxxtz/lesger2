@@ -5,8 +5,10 @@ import java.nio.file.*;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 public class LedgerSystem {
     private Map<String, User> users;
@@ -613,7 +615,12 @@ public class LedgerSystem {
         }
     }
 
+
+
     private void mainMenu() {
+        // Check loan reminders on login
+        LoanReminder.checkLoanStatus(loans, currentUser.getUserId());
+
         while (true) {
             System.out.printf("\n== Welcome, %s ==\n", currentUser.getName());
             System.out.printf("Balance: %.2f\n", currentUser.getBalance());
@@ -626,7 +633,8 @@ public class LedgerSystem {
             System.out.println("4. Savings");
             System.out.println("5. Credit Loan");
             System.out.println("6. Deposit Interest Predictor");
-            System.out.println("7. Logout");
+            System.out.println("7. View Analytics");  // New option
+            System.out.println("8. Logout");
             System.out.print(">");
 
             String choice = scanner.nextLine();
@@ -639,7 +647,7 @@ public class LedgerSystem {
                     handleCredit();
                     break;
                 case "3":
-                    viewHistory();
+                    handleHistory();  // Updated method
                     break;
                 case "4":
                     handleSavings();
@@ -651,103 +659,326 @@ public class LedgerSystem {
                     handleDepositInterest();
                     break;
                 case "7":
+                    handleAnalytics();  // New method
+                    break;
+                case "8":
                     System.out.println("Thank you for using \"Ledger System\"");
                     return;
+                default:
+                    System.out.println("Invalid option!");
             }
         }
     }
 
-    private void handleDebit() {
-        System.out.println("== Debit ==");
-        System.out.print("Enter amount: ");
-        String amount = scanner.nextLine();
-        System.out.print("Enter description: ");
-        String description = scanner.nextLine();
+    // Add new method to handle the history menu
+    private void handleHistory() {
+        System.out.println("\n== History Options ==");
+        System.out.println("1. View All History");
+        System.out.println("2. Filter and Sort");
+        System.out.print("Choice: ");
 
-        if (recordTransaction("debit", amount, description)) {
-            System.out.println("Debit Successfully Recorded!!!");
+        String choice = scanner.nextLine();
+        switch (choice) {
+            case "1":
+                viewHistory();
+                break;
+            case "2":
+                viewFilteredHistory();
+                break;
+            default:
+                System.out.println("Invalid option!");
         }
     }
 
-    private void handleCredit() {
-        System.out.println("== Credit ==");
-        System.out.print("Enter amount: ");
-        String amount = scanner.nextLine();
-        System.out.print("Enter description: ");
-        String description = scanner.nextLine();
+    // Add new method to handle analytics
+    private void handleAnalytics() {
+        while (true) {
+            System.out.println("\n== Analytics ==");
+            System.out.println("1. View Spending Trends");
+            System.out.println("2. View Spending Distribution");
+            System.out.println("3. View Savings Growth");
+            System.out.println("4. View Loan Progress");
+            System.out.println("5. Back to Main Menu");
+            System.out.print("Choice: ");
 
-        if (recordTransaction("credit", amount, description)) {
-            System.out.println("Credit Successfully Recorded!!!");
+            String choice = scanner.nextLine();
+
+            switch (choice) {
+                case "1":
+                    DataVisualization.showSpendingTrends(transactions.stream()
+                            .filter(t -> t.getUserId() == currentUser.getUserId())
+                            .collect(Collectors.toList()));
+                    break;
+                case "2":
+                    DataVisualization.showSpendingDistribution(transactions.stream()
+                            .filter(t -> t.getUserId() == currentUser.getUserId())
+                            .collect(Collectors.toList()));
+                    break;
+                case "3":
+                    DataVisualization.showSavingsGrowth(
+                            currentUser.getSavings(),
+                            currentUser.getSavingsPercentage());
+                    break;
+                case "4":
+                    Optional<Loan> activeLoan = loans.stream()
+                            .filter(l -> l.getUserId() == currentUser.getUserId()
+                                    && l.getStatus().equals("active"))
+                            .findFirst();
+                    DataVisualization.showLoanRepayment(activeLoan.orElse(null));
+                    break;
+                case "5":
+                    return;
+                default:
+                    System.out.println("Invalid option!");
+            }
         }
     }
 
-    private void handleSavings() {
-        System.out.println("== Savings ==");
-        System.out.print("Are you sure you want to activate it? (Y/N) : ");
-        String activate = scanner.nextLine();
+        private void handleDebit() {
+            System.out.println("== Debit ==");
+            System.out.print("Enter amount: ");
+            String amount = scanner.nextLine();
+            System.out.print("Enter description: ");
+            String description = scanner.nextLine();
 
-        if (activate.equalsIgnoreCase("Y")) {
-            System.out.print("Please enter the percentage you wish to deduct from the next debit: ");
-            try {
-                int percentage = Integer.parseInt(scanner.nextLine());
-                if (setSavings(percentage)) {
-                    System.out.println("Savings Settings added successfully!!!");
+            if (recordTransaction("debit", amount, description)) {
+                System.out.println("Debit Successfully Recorded!!!");
+            }
+        }
+
+        private void handleCredit() {
+            System.out.println("== Credit ==");
+            System.out.print("Enter amount: ");
+            String amount = scanner.nextLine();
+            System.out.print("Enter description: ");
+            String description = scanner.nextLine();
+
+            if (recordTransaction("credit", amount, description)) {
+                System.out.println("Credit Successfully Recorded!!!");
+            }
+        }
+
+        private void handleSavings() {
+            System.out.println("== Savings ==");
+            System.out.print("Are you sure you want to activate it? (Y/N) : ");
+            String activate = scanner.nextLine();
+
+            if (activate.equalsIgnoreCase("Y")) {
+                System.out.print("Please enter the percentage you wish to deduct from the next debit: ");
+                try {
+                    int percentage = Integer.parseInt(scanner.nextLine());
+                    if (setSavings(percentage)) {
+                        System.out.println("Savings Settings added successfully!!!");
+                    }
+                } catch (NumberFormatException e) {
+                    System.out.println("Invalid percentage!");
                 }
-            } catch (NumberFormatException e) {
-                System.out.println("Invalid percentage!");
             }
         }
-    }
 
-    private void checkAndTransferSavings() {
-        try {
-            // Get the current date
-            LocalDate currentDate = LocalDate.now();
-            LocalDate lastLoginDate = currentUser.getLastLoginDate();
+        private void checkAndTransferSavings() {
+            try {
+                // Get the current date
+                LocalDate currentDate = LocalDate.now();
+                LocalDate lastLoginDate = currentUser.getLastLoginDate();
 
-            // Check if we've crossed a month boundary since last login
-            if (lastLoginDate != null &&
-                    (currentDate.getMonth() != lastLoginDate.getMonth() ||
-                            currentDate.getYear() != lastLoginDate.getYear())) {
+                // Check if we've crossed a month boundary since last login
+                if (lastLoginDate != null &&
+                        (currentDate.getMonth() != lastLoginDate.getMonth() ||
+                                currentDate.getYear() != lastLoginDate.getYear())) {
 
-                // Transfer savings to balance
-                BigDecimal savingsAmount = currentUser.getSavings();
-                if (savingsAmount.compareTo(BigDecimal.ZERO) > 0) {
-                    currentUser.setBalance(currentUser.getBalance().add(savingsAmount));
-                    currentUser.setSavings(BigDecimal.ZERO);
+                    // Transfer savings to balance
+                    BigDecimal savingsAmount = currentUser.getSavings();
+                    if (savingsAmount.compareTo(BigDecimal.ZERO) > 0) {
+                        currentUser.setBalance(currentUser.getBalance().add(savingsAmount));
+                        currentUser.setSavings(BigDecimal.ZERO);
 
-                    // Record this as a transaction
-                    String description = "Monthly Savings Transfer";
-                    int transactionId = transactions.size() + 1;
+                        // Record this as a transaction
+                        String description = "Monthly Savings Transfer";
+                        int transactionId = transactions.size() + 1;
 
-                    Transaction transaction = new Transaction(
-                            transactionId,
-                            currentUser.getUserId(),
-                            "debit",
-                            savingsAmount,
-                            description,
-                            currentDate
-                    );
-                    transactions.add(transaction);
+                        Transaction transaction = new Transaction(
+                                transactionId,
+                                currentUser.getUserId(),
+                                "debit",
+                                savingsAmount,
+                                description,
+                                currentDate
+                        );
+                        transactions.add(transaction);
 
-                    // Save to CSV
-                    try (PrintWriter writer = new PrintWriter(new FileWriter("transactions.csv", true))) {
-                        writer.printf("%d,%d,%s,%.2f,%s,%s\n",
-                                transactionId, currentUser.getUserId(), "debit",
-                                savingsAmount, description, currentDate);
-                        System.out.println("Monthly savings of $" + savingsAmount +
-                                " transferred to balance!");
-                    } catch (IOException e) {
-                        System.out.println("Error recording savings transfer!");
+                        // Save to CSV
+                        try (PrintWriter writer = new PrintWriter(new FileWriter("transactions.csv", true))) {
+                            writer.printf("%d,%d,%s,%.2f,%s,%s\n",
+                                    transactionId, currentUser.getUserId(), "debit",
+                                    savingsAmount, description, currentDate);
+                            System.out.println("Monthly savings of $" + savingsAmount +
+                                    " transferred to balance!");
+                        } catch (IOException e) {
+                            System.out.println("Error recording savings transfer!");
+                        }
                     }
                 }
-            }
 
-            // Update last login date
-            currentUser.setLastLoginDate(currentDate);
-        } catch (Exception e) {
-            System.out.println("Error processing savings transfer: " + e.getMessage());
+                // Update last login date
+                currentUser.setLastLoginDate(currentDate);
+            } catch (Exception e) {
+                System.out.println("Error processing savings transfer: " + e.getMessage());
+            }
         }
+
+
+        public void viewFilteredHistory() {
+            System.out.println("\n== History Filters ==");
+            System.out.println("1. Filter by Date Range");
+            System.out.println("2. Filter by Transaction Type");
+            System.out.println("3. Filter by Amount Range");
+            System.out.println("4. Sort by Date");
+            System.out.println("5. Sort by Amount");
+            System.out.println("6. View All");
+            System.out.print("Choose option: ");
+        String choice = scanner.nextLine();
+        List<Transaction> filteredTransactions = transactions.stream()
+                .filter(t -> t.getUserId() == currentUser.getUserId())
+                .collect(Collectors.toList());
+
+        switch (choice) {
+            case "1":
+                filterByDateRange(filteredTransactions);
+                break;
+            case "2":
+                filterByType(filteredTransactions);
+                break;
+            case "3":
+                filterByAmountRange(filteredTransactions);
+                break;
+            case "4":
+                sortByDate(filteredTransactions);
+                break;
+            case "5":
+                sortByAmount(filteredTransactions);
+                break;
+            case "6":
+                displayTransactions(filteredTransactions);
+                break;
+            default:
+                System.out.println("Invalid option!");
+        }
+    }
+
+    private void filterByDateRange(List<Transaction> transactions) {
+        System.out.println("\nEnter date range (YYYY-MM-DD):");
+        System.out.print("Start date: ");
+        String startStr = scanner.nextLine();
+        System.out.print("End date: ");
+        String endStr = scanner.nextLine();
+
+        try {
+            LocalDate startDate = LocalDate.parse(startStr);
+            LocalDate endDate = LocalDate.parse(endStr);
+
+            List<Transaction> filtered = transactions.stream()
+                    .filter(t -> !t.getDate().isBefore(startDate) && !t.getDate().isAfter(endDate))
+                    .collect(Collectors.toList());
+
+            displayTransactions(filtered);
+        } catch (DateTimeParseException e) {
+            System.out.println("Invalid date format!");
+        }
+    }
+
+    private void filterByType(List<Transaction> transactions) {
+        System.out.println("\nSelect type:");
+        System.out.println("1. Debit");
+        System.out.println("2. Credit");
+        System.out.print("Choice: ");
+        String choice = scanner.nextLine();
+
+        List<Transaction> filtered = transactions.stream()
+                .filter(t -> t.getType().equals(choice.equals("1") ? "debit" : "credit"))
+                .collect(Collectors.toList());
+
+        displayTransactions(filtered);
+    }
+
+    private void filterByAmountRange(List<Transaction> transactions) {
+        System.out.print("\nMinimum amount: ");
+        BigDecimal min = new BigDecimal(scanner.nextLine());
+        System.out.print("Maximum amount: ");
+        BigDecimal max = new BigDecimal(scanner.nextLine());
+
+        List<Transaction> filtered = transactions.stream()
+                .filter(t -> t.getAmount().compareTo(min) >= 0 && t.getAmount().compareTo(max) <= 0)
+                .collect(Collectors.toList());
+
+        displayTransactions(filtered);
+    }
+
+    private void sortByDate(List<Transaction> transactions) {
+        System.out.println("\n1. Newest First");
+        System.out.println("2. Oldest First");
+        System.out.print("Choice: ");
+        String choice = scanner.nextLine();
+
+        List<Transaction> sorted = transactions.stream()
+                .sorted(choice.equals("1")
+                        ? Comparator.comparing(Transaction::getDate).reversed()
+                        : Comparator.comparing(Transaction::getDate))
+                .collect(Collectors.toList());
+
+        displayTransactions(sorted);
+    }
+
+    private void sortByAmount(List<Transaction> transactions) {
+        System.out.println("\n1. Highest First");
+        System.out.println("2. Lowest First");
+        System.out.print("Choice: ");
+        String choice = scanner.nextLine();
+
+        List<Transaction> sorted = transactions.stream()
+                .sorted(choice.equals("1")
+                        ? Comparator.comparing(Transaction::getAmount).reversed()
+                        : Comparator.comparing(Transaction::getAmount))
+                .collect(Collectors.toList());
+
+        displayTransactions(sorted);
+    }
+
+    private void displayTransactions(List<Transaction> transactions) {
+        if (transactions.isEmpty()) {
+            System.out.println("\nNo transactions found!");
+            return;
+        }
+
+        // Use the same format as viewHistory() but with filtered transactions
+        String format = "| %-10s | %-15s | %12s | %12s | %12s |%n";
+        String separator = "+------------+-----------------+--------------+--------------+--------------+%n";
+
+        System.out.printf(separator);
+        System.out.printf(format, "Date", "Description", "Debit", "Credit", "Balance");
+        System.out.printf(separator);
+
+        BigDecimal runningBalance = BigDecimal.ZERO;
+        for (Transaction t : transactions) {
+            if (t.getType().equals("debit")) {
+                runningBalance = runningBalance.add(t.getAmount());
+                System.out.printf(format,
+                        t.getDate().toString(),
+                        t.getDescription(),
+                        String.format("%.2f", t.getAmount()),
+                        "",
+                        String.format("%.2f", runningBalance));
+            } else {
+                runningBalance = runningBalance.subtract(t.getAmount());
+                System.out.printf(format,
+                        t.getDate().toString(),
+                        t.getDescription(),
+                        "",
+                        String.format("%.2f", t.getAmount()),
+                        String.format("%.2f", runningBalance));
+            }
+        }
+        System.out.printf(separator);
     }
 
 
