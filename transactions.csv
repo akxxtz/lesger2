@@ -19,3 +19,8 @@ transaction_id,user_id,type,amount,description,date
 18,1,debit,100,hi,2025-01-04
 19,1,debit,20,hihi,2025-01-04
 20,1,debit,200,money,2025-01-04
+21,1,debit,1000,uiui,2025-01-04
+22,1,debit,500,Copywriting,2025-01-04
+23,1,debit,400,books,2025-01-04
+24,1,debit,20,sa,2025-01-04
+25,1,debit,23,soo,2025-01-04
