@@ -48,7 +48,15 @@ public class LedgerSystem {
                         case "users.csv":
                             writer.println("user_id,name,email,password_hash,last_login_date");
                             break;
-                        // ... rest of the cases remain the same
+                        case "transactions.csv":
+                            writer.println("transaction_id,user_id,type,amount,description,date");
+                            break;
+                        case "savings.csv":
+                            writer.println("savings_id,user_id,status,percentage");
+                            break;
+                        case "loans.csv":
+                            writer.println("loan_id,user_id,principal_amount,interest_rate,repayment_period,outstanding_balance,status,created_at");
+                            break;
                     }
                     writer.close();
                 }
