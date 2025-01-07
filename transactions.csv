@@ -24,3 +24,4 @@ transaction_id,user_id,type,amount,description,date
 23,1,debit,400,books,2025-01-04
 24,1,debit,20,sa,2025-01-04
 25,1,debit,23,soo,2025-01-04
+26,1,credit,7000,Flight to Japan,2025-01-07
